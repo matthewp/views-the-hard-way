@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en">
+<title>Counter</title>
+
+<main></main>
+
+<script type="module">
+  import template from './template.js';
+
+  const main = document.querySelector('main');
+  const update = template.call(main);
+  main.appendChild(update());
+</script>
