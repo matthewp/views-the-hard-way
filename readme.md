@@ -15,3 +15,6 @@ We call this technique *the hard way* because it askews abstractions in favor of
 There are several reasons why you might be interested in writing your views the hard way:
 
 * __Performance__: Templates the hard way uses direct imperative code, so there are no unnecessary operations performed. Whether a hot or cold path, using this technique ensures nearly the best possible performance you can get in JavaScript.
+* __No dependencies__: This technique uses no dependencies, so your code will *never* have to be upgraded. Have you ever used a library that released a breaking change that took you a day to upgrade? You'll never experience that problem again.
+* __Portability__: Code written with simple imperative views is portable to any framework. That makes it perfect for low-level components that you might want to share with several framework communities. But I recommend using it on full apps as well.
+* __Maintainability__: Despite the reputation of imperative code being difficult to maintain, views written with Templates the hard way are *extremely* maintainable. This is because they follow strict conventions (you'll learn these later). These conventions ensure you always know where to look in a view. Additionally it follows a *props down, events up* formula that makes data sharing straight-forward.
