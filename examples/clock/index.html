@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<title>Clock</title>
+
+<style>
+  main {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    padding: 3em;
+  }
+
+  .one,
+  .two {
+    width: 15rem;
+    height: 15rem;
+  }
+</style>
+
+<main>
+  <analog-clock class="one"></analog-clock>
+  <analog-clock class="two" data-time="1301757851000"></analog-clock>
+</main>
+
+<script type="module" src="./clock.js"></script>
