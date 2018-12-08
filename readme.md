@@ -20,10 +20,13 @@ There are several reasons why you might be interested in writing your views the 
 * __Maintainability__: Despite the reputation of imperative code being difficult to maintain, views written with Templates the hard way are *extremely* maintainable. This is because they follow strict conventions (you'll learn these later). These conventions ensure you always know where to look in a view. Additionally it follows a *props down, events up* model that makes data sharing straight-forward.
 * __Browser support__: Code written in this manner is supported by all browsers; full-stop. We do use events to make passing data back up the component tree and our examples use a newer, nicer API, to do that, but you can use an older technique (discussed in the compatibility section) to get you back to at least IE9. But if you want to go further back than that even, substitute passing functions as props instead of using events and you can use this technique in IE6 if you want. And it will be by far the most performant solution you'll find.
 * __Easier to debug__: Using this approach stack traces become shallow (usually only a few function calls). This is because there are no layers between events and your code. Everything is your code, and as long as you name your functions, you'll get incredible stack traces that make it easy to trace where something goes wrong.
+* __Functional__: This doesn't differience the techique vs *all* frameworks but it's worth pointing out at a benefit. *Templates the Hard Way* is not functional in the immutable sense; there are definitely mutations; but it is functional in the sense that you're dealing with plain functions (no classes in sight) and without side-effects outside of the view's local state.
 
 ## The structure
 
-Enough with the arguments for now, let's talk about the structure. A view component written with *Templates the Hard Way* looks like the following:
+Enough with the arguments for now, let's talk about the structure. A view component written with *Templates the Hard Way* looks like the following. This is a full __hello world__. From here we'll break down each part and explain it on its own.
+
+Once you understand each part you know how to build components/views using this pattern it's everything you need to know.
 
 ```js
 const template = document.createElement('template');
@@ -38,10 +41,32 @@ function clone() {
 function init() {
   /* DOM variables */
   let frag = clone();
+  let nameNode = frag.querySelector('#name');
 
-  /* More stuff here*/
+  /* State variables */
+  let name;
 
-  function update() {
+  /* DOM update functions */
+  function setNameNode(value) {
+    nameNode.textContent = value;
+  }
+
+  /* State update functions */
+  function setName(value) {
+    if(name !== value) {
+      name = value;
+      setNameNode(value);
+    }
+  }
+
+  /* Event dispatchers */
+
+  /* Event listeners */
+
+  /* Initialization */
+
+  function update(data = {}) {
+    if(data.name) setName(data.name);
     return frag;
   }
 
@@ -72,8 +97,98 @@ So instead of interpolating, we add elements at points within the HTML that we w
 
 ### clone()
 
-This function is purely for convenience.
+```js
+function clone() {
+  return document.importNode(template.content, true);
+}
+```
 
+This function is mostly for convenience. All it does is clone the template and return the result. 
+
+However there are cases where you might want to slightly adjust the output. [document.importNode](https://developer.mozilla.org/en-US/docs/Web/API/Document/importNode) returns a fragment; there are cases where you want the returned node to be an __element__ (mostly so that the consumer of your view can set up event listeners). So to return the root element you can change __clone__ to:
+
+```js
+function clone() {
+  return document.importNode(template.content, true).firstElementChild;
+}
+```
+
+### init()
+
+This is the function that gets called by parent views in order to create a new view instance. Going with our hello world example, a consumer that wants to insert this into the page would do:
+
+```html
+<!doctype html>
+<html lang="en">
+<title>Hello world</title>
+
+<main></main>
+
+<script type="module">
+  import init from './view.js';
+
+  const main = document.querySelector('main');
+  const update = init();
+  main.appendChild(update({ name: 'world' }));
+</script>
+```
+
+Notice here that `view` returns another function, `update`. This is the way that parent views can pass props down to the view. We'll discuss this concept more in the *update* section.
+
+Since `init` creates a new view instance, it's similar in that way to a component's constructor. To give an example, [React.Component](https://reactjs.org/docs/react-component.html#constructor) does setup work in its constructor and updates happen in its `render`.
+
+```js
+class Welcome extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {};
+  }
+
+  render() {
+    return <div>Hello {this.props.name}!</div>;
+  }
+}
+```
+
+Using this component in another class illustrates how *Templates the Hard Way* is similar:
+
+```js
+class App {
+  render() {
+    return <Welcome name="world" />
+  }
+}
+```
+
+To make the comparison, in our parent component/view we do:
+
+```js
+function init() {
+  /* DOM variables */
+  let frag = clone();
+  let hostNode = frag.querySelector('#host');
+
+  /* DOM views */
+  let updateWelcome = welcomeView();
+
+  /* DOM update functions */
+  function setHostNode(welcomeFrag) {
+    hostNode.appendChild(welcomeFrag());
+  }
+
+  /* Initialization */
+  setHostNode(updateWelcome());
+
+  function update(data = {}) {
+    // This is equivalent to render() being called.
+    if(data.name) updateWelcome(data);
+
+    return frag;
+  }
+
+  return update;
+}
+```
 
 ## Compatibility
 
