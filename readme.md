@@ -87,7 +87,7 @@ template.innerHTML = `
 `;
 ```
 
-This is the view's template. It's a [<template>](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template) element. Setting its `innerHTML` causes the browser to parse and save this HTML as the template's `template.content` property. This is a [DocumentFragment](https://developer.mozilla.org/en-US/docs/Web/API/DocumentFragment) that can be quickly cloned.
+This is the view's template. It's a [\<template\>](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template) element. Setting its `innerHTML` causes the browser to parse and save this HTML as the template's `template.content` property. This is a [DocumentFragment](https://developer.mozilla.org/en-US/docs/Web/API/DocumentFragment) that can be quickly cloned.
 
 Notice that there are no interpolations with data. This is because, as of now, the browser doesn't support any such API. In the spirit of *The Hard Way* we use only what the browser gives us. 
 
