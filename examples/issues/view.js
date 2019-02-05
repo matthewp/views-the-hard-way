@@ -1,4 +1,4 @@
-import titleView from './title-template.js';
+import titleView from './title-view.js';
 import postCommentView from './post-comment-view.js';
 import commentsView from './comments-view.js';
 import commentView from './comment-view.js';

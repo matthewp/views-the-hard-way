@@ -5,9 +5,9 @@
 <main></main>
 
 <script type="module">
-  import view from './view.js';
+  import init from './view.js';
 
   const main = document.querySelector('main');
-  const update = template.call(main);
+  const update = init();
   main.appendChild(update({ name: 'world' }));
 </script>

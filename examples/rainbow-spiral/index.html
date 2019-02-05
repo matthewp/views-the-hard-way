@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<title>Rainbow Spiral</title>
+<link rel="stylesheet" href="./styles.css">
+
+<p>
+	Move your mouse around and click. Everything triggers a full render.
+</p>
+<p>
+	Powered by <a href="https://github.com/matthewp/templates-the-hard-way" target="_blank">Templates the Hard Way</a>.
+</p>
+
+<main></main>
+
+<script type="module">
+  import init from './view.js';
+
+  const main = document.querySelector('main');
+  const update = init();
+  main.appendChild(update());
+</script>
+
+

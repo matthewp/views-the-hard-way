@@ -56,7 +56,7 @@ function init() {
   }
 
   function onResetClick() {
-    count = 0;
+    setCount(0);
   }
 
   /* Init functionality */
