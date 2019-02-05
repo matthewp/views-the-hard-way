@@ -1,10 +1,10 @@
-# Templates the Hard Way
+# Writing JavaScript Views the Hard Way
 
-Learn how to build views in plain JavaScript in a way that is maintainable, performant, and fun. *Templates the Hard Way* is inspired by such books as [Learn C the Hard Way](https://learncodethehardway.org/c/).
+Learn how to build views in plain JavaScript in a way that is maintainable, performant, and fun. *Writing JavaScript Views the Hard Way* is inspired by such books as [Learn C the Hard Way](https://learncodethehardway.org/c/).
 
 ## What is this?
 
-Templates the Hard Way is a pattern for writing JavaScript views. It is meant to serve as an alternative to using frameworks and libraries such as [React](https://reactjs.org), [Vue](https://vuejs.org/) and [lit-html](https://lit-html.polymer-project.org/).
+Writing JavaScript Views the Hard Way is a pattern for writing JavaScript views. It is meant to serve as an alternative to using frameworks and libraries such as [React](https://reactjs.org), [Vue](https://vuejs.org/) and [lit-html](https://lit-html.polymer-project.org/).
 
 It is a __pattern__, not a library. This document explains how to write views in such a way as to avoid the [spaghetti code](https://en.wikipedia.org/wiki/Spaghetti_code) problems that commonly occur when writing low-level imperative code.
 
@@ -14,19 +14,19 @@ We call this technique *the hard way* because it askews abstractions in favor of
 
 There are several reasons why you might be interested in writing your views the hard way:
 
-* __Performance__: *Templates the Hard Way* uses direct imperative code, so there are no unnecessary operations performed. Whether a hot or cold path, using this technique ensures nearly the best possible performance you can get in JavaScript.
+* __Performance__: *Writing JavaScript Views the Hard Way* uses direct imperative code, so there are no unnecessary operations performed. Whether a hot or cold path, using this technique ensures nearly the best possible performance you can get in JavaScript.
 * __0 dependencies__: This technique uses no dependencies, so your code will *never* have to be upgraded. Have you ever used a library that released a breaking change that took you a day to upgrade? You'll never experience that problem again.
 * __Portability__: Code written with simple imperative views is portable to any framework. That makes it perfect for low-level components that you might want to share with several framework communities. But I recommend using it on full apps as well.
-* __Maintainability__: Despite the reputation of imperative code being difficult to maintain, views written with Templates the hard way are *extremely* maintainable. This is because they follow strict conventions (you'll learn these later). These conventions ensure you always know where to look in a view. Additionally it follows a *props down, events up* model that makes data sharing straight-forward.
-* __Browser support__: Code written in this manner is supported by all browsers; full-stop. We do use events to make passing data back up the component tree and our examples use a newer, nicer API, to do that, but you can use an older technique (discussed in the compatibility section) to get you back to at least IE9. But if you want to go further back than that even, substitute passing functions as props instead of using events and you can use this technique in IE6 if you want. And it will be by far the most performant solution you'll find.
+* __Maintainability__: Despite the reputation of imperative code being difficult to maintain, views written with Writing JavaScript Views the Hard Way are *extremely* maintainable. This is because they follow strict conventions (you'll learn these later). These conventions ensure you always know where to look in a view. Additionally it follows a *props down, events up* model that makes data sharing straight-forward.
+* __Browser support__: Code written in this manner is supported by all browsers; full-stop. We do use events to make passing data back up the component tree and our examples use a newer, nicer API, to do that, but you can use an older technique (discussed in the compatibility section) to get you back to at least IE9. But if you want to go further back than that even, substitute passing functions as props instead of using events and you can use this technique in IE6 if you want. And it will be by far the most performant solution you'll find for old browsers.
 * __Easier to debug__: Using this approach stack traces become shallow (usually only a few function calls). This is because there are no layers between events and your code. Everything is your code, and as long as you name your functions, you'll get incredible stack traces that make it easy to trace where something goes wrong.
-* __Functional__: This doesn't differience the techique vs *all* frameworks but it's worth pointing out at a benefit. *Templates the Hard Way* is not functional in the immutable sense; there are definitely mutations; but it is functional in the sense that you're dealing with plain functions (no classes in sight) and without side-effects outside of the view's local state.
+* __Functional__: This doesn't differentiate the technique vs *all* frameworks but it's worth pointing out at a benefit. *Writing JavaScript Views the Hard Way* is not functional in the immutable sense; there are definitely mutations; but it is functional in the sense that you're dealing with plain functions (no classes in sight) and without side-effects outside of the view's local state.
 
 ## The structure
 
-Enough with the arguments for now, let's talk about the structure. A view component written with *Templates the Hard Way* looks like the following. This is a full __hello world__. From here we'll break down each part and explain it on its own.
+Enough with the arguments for now, let's talk about the structure. A view component written with *Writing JavaScript Views the Hard Way* looks like the following. This is a full __hello world__. From here we'll break down each part and explain it on its own.
 
-Once you understand each part you know how to build components/views using this pattern it's everything you need to know.
+Once you understand each part you'll know how to build components/views using this pattern; it's everything you need to know.
 
 ```js
 const template = document.createElement('template');
@@ -129,15 +129,18 @@ This is the function that gets called by parent views in order to create a new v
 
   const main = document.querySelector('main');
   const update = init();
+
   main.appendChild(update({ name: 'world' }));
 </script>
 ```
 
-Notice here that `view` returns another function, `update`. This is the way that parent views can pass props down to the view. We'll discuss this concept more in the *update* section.
+Notice here that `view` returns another function, `update`. This is the way that parent views can pass props down to the view. We'll discuss this concept more in the [#update](update) section.
+
+#### React comparison
 
 Since `init` creates a new view instance, it's similar in that way to a component's constructor. To give an example, [React.Component](https://reactjs.org/docs/react-component.html#constructor) does setup work in its constructor and updates happen in its `render`.
 
-```js
+```jsx
 class Welcome extends React.Component {
   constructor(props) {
     super(props);
@@ -150,7 +153,7 @@ class Welcome extends React.Component {
 }
 ```
 
-Using this component in another class illustrates how *Templates the Hard Way* is similar:
+Using this component in another class illustrates how *Writing JavaScript Views the Hard Way* is similar:
 
 ```js
 class App {
@@ -189,6 +192,12 @@ function init() {
   return update;
 }
 ```
+
+### Sections within init()
+
+__TODO__
+
+
 
 ## Compatibility
 
