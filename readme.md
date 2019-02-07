@@ -195,9 +195,32 @@ function init() {
 
 ### Sections within init()
 
-__TODO__
+The `init` function acts as a closure for the view instance. It contains variables and functions that are used to change state, modify the DOM, listen to events, and receive updates from parent views.
 
+Conventional wisdom says this sort of imperative code causes chaos. *Writing JavaScript Views the Hard Way* prevents this by structuring each part of a view into sections. This __convention__ gives you a place to put everything your view needs. 
 
+After all, all code is imperative in the end. Abstractions are just conventions in hiding. A __pattern__, which is all *Writing JavaScript Views the Hard Way* is, are conventions in plain site.
+
+With that being said, here are the sections of `init`:
+
+#### DOM variables
+
+At the top of the `init` function is a comment `/* DOM variables */` and it looks something like this:
+
+```js
+function init() {
+  /* DOM variables */
+  let frag = clone();
+  let nameNode = frag.querySelector('#name');
+
+  // More stuff later...
+}
+```
+
+Let's break down what goes here:
+
+* The __fragment__ or root element returned by [clone()](#clone).
+* TODO 
 
 ## Compatibility
 
