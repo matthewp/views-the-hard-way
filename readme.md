@@ -219,8 +219,18 @@ function init() {
 
 Let's break down what goes here:
 
-* The __fragment__ or root element returned by [clone()](#clone).
-* TODO 
+* The __fragment__ or root element returned by [clone()](#clone) is assigned to `frag`.
+* `nameNode` is plucked from within the `frag` and held as a variable.
+
+This pattern will be used for any nodes which might need to be modified during the course of the view's lifetime.
+
+#### DOM views
+
+__TODO__
+
+#### State variables
+
+__TODO__
 
 ## Compatibility
 
