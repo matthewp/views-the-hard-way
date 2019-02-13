@@ -201,7 +201,7 @@ Conventional wisdom says this sort of imperative code causes chaos. *Writing Jav
 
 After all, all code is imperative in the end. Abstractions are just conventions in hiding. A __pattern__, which is all *Writing JavaScript Views the Hard Way* is, are conventions in plain site.
 
-With that being said, here are the sections of `init`:
+With that being said, here are the sections of `init`. 
 
 #### DOM variables
 
@@ -224,13 +224,87 @@ Let's break down what goes here:
 
 This pattern will be used for any nodes which might need to be modified during the course of the view's lifetime.
 
+By convention DOM nodes are named like `fooNode`. Where `foo` is contextual to the node's usage and `Node` denotes that it is a DOM node.
+
+As you'll see in below sections, there are many types of bindings in a view. Having conventional names makes it easier to tell what is what.
+
 #### DOM views
 
-__TODO__
+After __DOM variables__ come __DOM views__. These are other views used within the current view. If you are used to component libraries, a view is very much like a component. In the same way that components use other components, so do views use other views.
+
+```js
+import conditionalView from './conditiona.js';
+
+function init() {
+  /* DOM variables */
+  let frag = clone();
+
+  /* DOM views */
+  let updateCondition = conditionalView();
+
+  // More stuff later...
+}
+```
+
+As a convention view instances are named `updateFoo`. This isn't strictly required, of course, but it helps to distinguish them vs. the other types of variables within a view.
+
+The view instances are themselves functions. You pass them an object of properties which the view will use to update itself. Later in this document `update` is described.
 
 #### State variables
 
-__TODO__
+After __DOM views__ comes __State variables__. State variables are simply variables that are not DOM nodes or DOM views. Anything else like strings or numbers fit here.
+
+State variables are useful because they give us a mechanism to prevent mutating the DOM unless the variable has changed. Later when we discuss __State update functions__ you'll see how that works, and why it is useful.
+
+```js
+function init() {
+  /* DOM variables */
+  let frag = clone();
+  let nameNode = frag.querySelector('[name]');
+
+  /* State variables */
+  let name = 'world';
+
+  // More stuff later...
+}
+```
+
+#### DOM update functions
+
+There are essentially 2 uses for views: Mutating the DOM and listening to user input from the DOM.
+
+__DOM update functions__ comes after __State variables__ and provide the mechanism for updating DOM nodes.
+
+```js
+function init() {
+  /* DOM variables */
+  let frag = clone();
+  let nameNode = frag.querySelector('[name]');
+
+  /* DOM update functions */
+  function setNodeName(value) {
+    nameNode.value = value;
+  }
+
+  // More stuff later...
+}
+```
+
+In the [DOM variables](#dom-variables) section we mention that DOM variables are named like `nameNode`. This helps to distinguish them from other types of variables in a view, like state variables.
+
+In the same way, DOM update functions are named by convention as `setNodeName`. Breaking this down:
+
+* `set` is an action we are taking on the node. It doesn't have to be set, it could be `change` or `delete` depending on what you are doing and what language you prefer.
+* `name` specifies that this node holds information about a __name__.
+* `Node` specifies that it is a DOM node that is being updated.
+
+***Important***
+
+It is critical that DOM nodes only be modified by DOM update functions. One of the difficulties in writing low-level imperative views is keeping track of where DOM mutations can occur.
+
+By restricting mutations to only DOM update functions we can more easily figure out where a mutation occurs. Additionally you can easily stick a breakpoint inside of this function and see the stack trace to figure out how we got here.
+
+![An example of shallow stack traces that you get from using views the hard way](https://user-images.githubusercontent.com/361671/52751232-ca8b6180-2fbc-11e9-96bc-393c68a019ef.png)
 
 ## Compatibility
 
