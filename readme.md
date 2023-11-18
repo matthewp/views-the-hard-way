@@ -59,6 +59,8 @@ function init() {
     }
   }
 
+  /* State logic */
+
   /* Event dispatchers */
 
   /* Event listeners */
@@ -305,6 +307,61 @@ It is critical that DOM nodes only be modified by DOM update functions. One of t
 By restricting mutations to only DOM update functions we can more easily figure out where a mutation occurs. Additionally you can easily stick a breakpoint inside of this function and see the stack trace to figure out how we got here.
 
 ![An example of shallow stack traces that you get from using views the hard way](https://user-images.githubusercontent.com/361671/52751232-ca8b6180-2fbc-11e9-96bc-393c68a019ef.png)
+
+#### State update functions
+
+After the DOM update functions comes the __State update functions__. This is a lot like the DOM update functions, but instead it is where __State variables__ are changed. An example of a state update function:
+
+```js
+function init() {
+  /* DOM variables */
+  let frag = clone();
+  let nameNode = frag.querySelector('.name');
+
+  /* State variables */
+  let name;
+
+  /* DOM update functions */
+  function setNameNode(value) {
+    nameNode.textContent = value;
+  }
+
+  /* State update functions */
+  function setName(value) {
+    if(name !== value) {
+      name = value;
+      setNameNode(value);
+    }
+  }
+
+  // More stuff later...
+}
+```
+
+The naming convention for State update functions is `setName`:
+
+* `set` is the action we are taking on the state.
+* `name` denotes the name of the state variable.
+
+The other thing to notice about State update functions is the following logic (from the example):
+
+```js
+if(name !== value) {
+  name = value;
+  setNameNode(value);
+}
+```
+
+The convention here is to check if the incoming value is different from the current value. If so, reassign the State variable to the new value. Secondary, you also often have a corresponding __DOM update function__ that gets called when the state variable changes. This is important because it means that we are only updating DOM when necessary.
+
+Usually a State update function is only going to call *one* DOM update function. This isn't always the case, but if you find yourself modifying multiple DOM nodes in a single State update function, it might be the case that your State variable is responsibility for too much. Instead break up the state into smaller pieces, create more State update functions, and call those in the __State logic__ section (discussed below).
+
+***Important***
+
+Like with DOM update functions, it's critical that State variables are *only* updated within the State update functions. In particular to state, it's important so that:
+
+* You can easily track and debug where state is modified, as for each variable there's only one place where it can happen.
+* By only mutating state in the State update functions, you consolidate the logic in one place.
 
 ## Compatibility
 
