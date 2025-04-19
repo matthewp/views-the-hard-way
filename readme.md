@@ -201,7 +201,7 @@ The `init` function acts as a closure for the view instance. It contains variabl
 
 Conventional wisdom says this sort of imperative code causes chaos. *Writing JavaScript Views the Hard Way* prevents this by structuring each part of a view into sections. This __convention__ gives you a place to put everything your view needs. 
 
-After all, all code is imperative in the end. Abstractions are just conventions in hiding. A __pattern__, which is all *Writing JavaScript Views the Hard Way* is, are conventions in plain site.
+After all, all code is imperative in the end. Abstractions are just conventions in hiding. A __pattern__, which is all *Writing JavaScript Views the Hard Way* is, are conventions in plain sight.
 
 With that being said, here are the sections of `init`. 
 
