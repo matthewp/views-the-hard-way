@@ -8,7 +8,7 @@ Writing JavaScript Views the Hard Way is a pattern for writing JavaScript views.
 
 It is a __pattern__, not a library. This document explains how to write views in such a way as to avoid the [spaghetti code](https://en.wikipedia.org/wiki/Spaghetti_code) problems that commonly occur when writing low-level imperative code.
 
-We call this technique *the hard way* because it askews abstractions in favor of directness.
+We call this technique *the hard way* because it eschews abstractions in favor of directness.
 
 ### Advantages over frameworks
 
