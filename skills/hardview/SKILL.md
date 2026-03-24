@@ -1,20 +1,11 @@
 ---
 name: hardview
-description: Create vanilla JavaScript view components using the "Views the Hard Way" pattern. Use when asked to create a view, component, or UI element with raw/vanilla JavaScript DOM manipulation, or when the user mentions "hardview" or "views the hard way".
+description: "Create vanilla JavaScript view components using the 'Views the Hard Way' pattern — render templates, bind event handlers, compose child views, and manage component lifecycle with raw DOM manipulation. Use when asked to create a view, component, or UI element with vanilla JavaScript, or when the user mentions 'hardview' or 'views the hard way'."
 ---
 
 # Views the Hard Way
 
 A pattern—not a library—for building views using plain JavaScript with native browser APIs. This approach emphasizes directness over abstraction, achieving maximum performance with zero dependencies.
-
-## Why This Pattern?
-
-- **Performance**: Direct imperative code eliminates unnecessary operations
-- **Zero dependencies**: Code never requires upgrades or breaking changes
-- **Portability**: Views work across frameworks and communities
-- **Maintainability**: Strict conventions ensure consistency
-- **Debugging**: Shallow stack traces make troubleshooting straightforward
-- **Functional approach**: Plain functions without classes or side effects
 
 ## Structure of Every View
 
@@ -246,16 +237,7 @@ return update;
 
 ### Conditional Updates
 
-Always check if values changed in state setters:
-
-```javascript
-function setName(value) {
-  if (name !== value) {  // ALWAYS check
-    name = value;
-    setNameNode(value);
-  }
-}
-```
+Always guard state setters with an equality check before mutating (see State Update Functions above).
 
 ## Complete Example
 
@@ -305,215 +287,12 @@ function init() {
 export default init;
 ```
 
-## Example with Child Views
+## Advanced Examples
 
-```javascript
-import avatarInit from './avatar.js';
-
-const template = document.createElement('template');
-template.innerHTML = `<div class="user-card">
-  <div class="avatar-container"></div>
-  <div class="info">
-    <span class="name"></span>
-    <span class="role"></span>
-  </div>
-</div>`;
-
-function clone() {
-  return document.importNode(template.content, true).firstElementChild;
-}
-
-function init() {
-  // DOM Variables
-  let el = clone();
-  let avatarContainer = el.querySelector('.avatar-container');
-  let nameNode = el.querySelector('.name');
-  let roleNode = el.querySelector('.role');
-
-  // DOM Views
-  let updateAvatar = avatarInit();
-  avatarContainer.appendChild(updateAvatar());
-
-  // State Variables
-  let name;
-  let role;
-  let avatarUrl;
-
-  // DOM Update Functions
-  function setNameNode(value) {
-    nameNode.textContent = value;
-  }
-
-  function setRoleNode(value) {
-    roleNode.textContent = value;
-  }
-
-  // State Update Functions
-  function setName(value) {
-    if (name !== value) {
-      name = value;
-      setNameNode(value);
-    }
-  }
-
-  function setRole(value) {
-    if (role !== value) {
-      role = value;
-      setRoleNode(value);
-    }
-  }
-
-  function setAvatarUrl(value) {
-    if (avatarUrl !== value) {
-      avatarUrl = value;
-      updateAvatar({ url: value });
-    }
-  }
-
-  // Update
-  function update(data = {}) {
-    if ('name' in data) setName(data.name);
-    if ('role' in data) setRole(data.role);
-    if ('avatarUrl' in data) setAvatarUrl(data.avatarUrl);
-    return el;
-  }
-
-  return update;
-}
-
-export default init;
-```
-
-## Example with Events (Counter)
-
-```javascript
-const template = document.createElement('template');
-template.innerHTML = `<div class="counter">
-  <button class="decrement">-</button>
-  <span class="count">0</span>
-  <button class="increment">+</button>
-</div>`;
-
-function clone() {
-  return document.importNode(template.content, true).firstElementChild;
-}
-
-function init() {
-  // DOM Variables
-  let el = clone();
-  let countNode = el.querySelector('.count');
-  let incrementNode = el.querySelector('.increment');
-  let decrementNode = el.querySelector('.decrement');
-
-  // State Constants
-  const min = 0;
-
-  // State Variables
-  let count;
-
-  // DOM Update Functions
-  function setCountNode(value) {
-    countNode.textContent = value;
-  }
-
-  // State Update Functions
-  function setCount(value) {
-    if (count !== value) {
-      count = value;
-      setCountNode(value);
-    }
-  }
-
-  // State Logic
-  function canDecrement() {
-    return count - 1 >= min;
-  }
-
-  // Event Listeners
-  function onIncrementClick() {
-    setCount(count + 1);
-  }
-
-  function onDecrementClick() {
-    if (canDecrement()) {
-      setCount(count - 1);
-    }
-  }
-
-  // Init Functionality
-  setCount(0);
-
-  function connect() {
-    incrementNode.addEventListener('click', onIncrementClick);
-    decrementNode.addEventListener('click', onDecrementClick);
-  }
-  connect();
-
-  function disconnect() {
-    incrementNode.removeEventListener('click', onIncrementClick);
-    decrementNode.removeEventListener('click', onDecrementClick);
-  }
-
-  // Update
-  function update(data = {}) {
-    if ('count' in data) setCount(data.count);
-    return el;
-  }
-
-  update.connect = connect;
-  update.disconnect = disconnect;
-
-  return update;
-}
-
-export default init;
-```
-
-## TypeScript
-
-When using TypeScript, add types minimally and let inference handle most things. Only add explicit types where TypeScript can't infer correctly.
-
-### What to type explicitly
-
-**Props interface** - Define an interface for the data parameter:
-
-```typescript
-interface CounterProps {
-  count?: number;
-}
-```
-
-**DOM query results** - querySelector returns `Element | null`, so cast to the specific element type:
-
-```typescript
-let countNode = el.querySelector('.count') as HTMLSpanElement;
-let buttonNode = el.querySelector('.increment') as HTMLButtonElement;
-```
-
-**Clone return** - `firstElementChild` can be null, so assert:
-
-```typescript
-function clone() {
-  return document.importNode(template.content, true).firstElementChild as HTMLElement;
-}
-```
-
-### What to let TypeScript infer
-
-- Return type of `init()` - inferred from the function body
-- Return type of `update()` - inferred as the element type
-- State variable types (usually) - inferred from initial assignment
-- Internal function signatures - inferred from usage
-
-### Export the view type
-
-Use `ReturnType` to derive the view type from the implementation, then export it for consumers:
-
-```typescript
-export type CounterView = ReturnType<typeof init>;
-```
-
-This keeps the type in sync with the implementation automatically.
+See reference files for complete examples:
+- [COMPOSITION.md](COMPOSITION.md) — Composing child views within a parent view
+- [EVENTS.md](EVENTS.md) — Event handling, dispatchers, and connect/disconnect lifecycle
+- [TYPESCRIPT.md](TYPESCRIPT.md) — TypeScript typing guidelines and conventions
 
 ## When Creating Views
 
