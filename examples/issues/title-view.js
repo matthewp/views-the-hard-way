@@ -1,158 +1,84 @@
-import { conditional } from './helpers.js';
+import { conditional } from "./conditional.js";
+import editTitleInit from "./edit-title-view.js";
+import { q } from "./q.js";
 
-const editTemplate = document.createElement('template');
-editTemplate.innerHTML = /* html */ `
-  <div class="edit-mode">
-    <input type="text" id="edit-name">
-    <button type="button">Save</button>
-  </div>
-`;
+export default function init(existingRoot) {
+  if (!existingRoot) throw new Error("hardview: title view requires existing root (header element)");
 
-function editMode() {
-  function clone() {
-    return document.importNode(editTemplate.content, true).firstElementChild;
-  }
+  // DOM Variables
+  const el = existingRoot;
+  const titleModeNode = q(el, ".title-mode");
+  const titleNode = q(el, "#title");
+  const editButtonNode = q(el, "#edit-button");
+  const statusNode = q(el, ".status");
 
-  function init() {
-    let frag = clone();
-    let editModeNode = frag;
-    let titleNode = frag.querySelector('#edit-name');
-    let saveNode = frag.querySelector('button');
-    let statusNode = frag.querySelector('.status');
+  // DOM Views — edit mode is created up-front but not mounted until edit is clicked.
+  const updateEditMode = editTitleInit();
+  const editModeNode = updateEditMode();
+  const showTitleMode = conditional(titleModeNode, editModeNode);
 
-    /* State variables */
-    let title;
-
-    /* DOM update functions */
-    function setTitleNode(value) {
-      titleNode.value = value;
-    }
-
-    /* State update functions */
-    function setTitle(value) {
-      if(title !== value) {
-        title = value;
-        setTitleNode(value);
-      }
-    }
-
-    /* Event dispatchers */
-    function dispatchTitleSaved() {
-      let ev = new CustomEvent('title-saved', {
-        detail: titleNode.value
-      });
-      editModeNode.dispatchEvent(ev);
-    }
-
-    /* Event listeners */
-    function onSaveClick() {
-      dispatchTitleSaved();
-    }
-
-    function onTitleKeyUp(ev) {
-      if(ev.keyCode === 13) {
-        dispatchTitleSaved();
-      }
-    }
-
-    saveNode.addEventListener('click', onSaveClick);
-    titleNode.addEventListener('keyup', onTitleKeyUp);
-
-    function disconnect() {
-      saveNode.removeEventListener('click', onSaveClick);
-      titleNode.removeEventListener('keyup', onTitleKeyUp);
-    }
-
-    function update(data = {}) {
-      if(data.title) setTitle(data.title);
-      return frag;
-    }
-
-    update.disconnect = disconnect;
-
-    return update;
-  }
-
-  return init;
-}
-
-function init(frag) {
-  /* DOM variables */
-  let titleModeNode = frag.querySelector('.title-mode');
-  let titleNode = frag.querySelector('#title');
-  let editButtonNode = frag.querySelector('#edit-button');
-  let statusNode = frag.querySelector('.status');
-
-  /* View variables */
-  let updateEditMode = editMode()();
-  let editModeNode = updateEditMode();
-  let showTitleMode = conditional(titleModeNode, updateEditMode());
-
-  /* State variables */
+  // State Variables — seeded from hydrated DOM so first equality check short-circuits.
   let title = titleNode.textContent;
-  let status = statusNode.textContent.toLowerCase();
+  let status = statusNode.textContent.trim().toLowerCase();
 
-  /* DOM update functions */
+  // DOM Update Functions
   function setTitleNode(value) {
     titleNode.textContent = value;
   }
 
   function setStatusNode(value) {
-    if(value === 'open') {
-      statusNode.textContent = 'Open';
-      statusNode.classList.remove('closed');
-      statusNode.classList.add('open');
-    } else {
-      statusNode.textContent = 'Closed';
-      statusNode.classList.remove('open');
-      statusNode.classList.add('closed');
-    }
+    const isOpen = value === "open";
+    statusNode.textContent = isOpen ? "Open" : "Closed";
+    statusNode.classList.toggle("open", isOpen);
+    statusNode.classList.toggle("closed", !isOpen);
   }
 
-  /* State update functions */
+  // State Update Functions
   function setTitle(value) {
-    if(title !== value) {
+    if (title !== value) {
       title = value;
       setTitleNode(value);
     }
   }
 
   function setStatus(value) {
-    if(status !== value) {
+    if (status !== value) {
       status = value;
       setStatusNode(value);
     }
   }
 
-  /* Event listeners */
-  function onEditClick() {
+  // Event Listeners
+  function onEditClick(/* event */) {
     updateEditMode({ title });
     showTitleMode(false);
+    editTitleInit.focusInput(editModeNode); // user-intent focus
   }
 
-  function onTitleSaved(ev) {
-    setTitle(ev.detail);
+  function onTitleSaved(event) {
+    setTitle(event.detail.title);
     showTitleMode(true);
   }
 
-  /* Init functionality */
-  editButtonNode.addEventListener('click', onEditClick);
-  editModeNode.addEventListener('title-saved', onTitleSaved);
+  // Init Functionality
+  const ac = new AbortController();
+  const { signal } = ac;
+
+  editButtonNode.addEventListener("click", onEditClick, { signal });
+  editModeNode.addEventListener("title-saved", onTitleSaved, { signal });
 
   function disconnect() {
-    editButtonNode.removeEventListener('click', onEditClick);
-    editModeNode.removeEventListener('title-saved', onTitleSaved);
+    ac.abort();
+    updateEditMode.disconnect?.();
   }
 
+  // Update
   function update(data = {}) {
-    if(data.title) setTitle(data.title);
-    if(data.status) setStatus(data.status);
-    return frag;
+    if ("title" in data) setTitle(data.title);
+    if ("status" in data) setStatus(data.status);
+    return el;
   }
 
   update.disconnect = disconnect;
-
   return update;
 }
-
-export default init;

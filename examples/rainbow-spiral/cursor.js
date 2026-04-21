@@ -1,94 +1,98 @@
-const template = document.createElement('template');
-template.innerHTML = `
-  <div>
-    <span> </span>
-  </div>
-`;
+import { q } from "./q.js";
+
+const template = document.createElement("template");
+template.innerHTML = `<div>
+  <span></span>
+</div>`;
 
 function clone() {
-  return document.importNode(template.content, true).firstElementChild;
+  const root = template.content.cloneNode(true).firstElementChild;
+  if (!root) throw new Error("hardview: template has no root element");
+  return root;
 }
 
-function init() {
-  /* DOM variables */
-  let root = clone();
-  let spanNode = root.firstElementChild;
+export default function init() {
+  // DOM Variables
+  const el = clone();
+  const spanNode = q(el, "span");
 
-  /* State variables */
-  let x, y, label, color, big;
+  // State Variables
+  let x;
+  let y;
+  let color;
+  let big;
+  let label;
 
-  /* DOM update functions */
-  function setRootNodeClass(value) {
-    root.className = value;
+  // DOM Update Functions
+  function setPositionNode() {
+    el.style.left = (x || 0) + "px";
+    el.style.top = (y || 0) + "px";
   }
 
-  function setRootNodeStyle(value) {
-    Object.assign(root.style, value);
+  function setColorNode(value) {
+    el.style.borderColor = value;
   }
 
-  function setSpanNode(value) {
-    spanNode.firstChild.nodeValue = value;
+  function setClassNode() {
+    let cl = "cursor";
+    if (big) cl += " big";
+    if (label) cl += " label";
+    el.className = cl;
   }
 
-  function setSpanNodeClass(value) {
-    if(spanNode.className !== value) {
-      spanNode.className = value;
+  function setLabelNode() {
+    spanNode.className = label ? "label" : "";
+    spanNode.textContent = label ? `${x},${y}` : "";
+  }
+
+  // State Update Functions
+  function setX(value) {
+    if (x !== value) {
+      x = value;
+      setPositionNode();
+      if (label) setLabelNode();
     }
   }
 
-  /* State update functions */
-  function setStyle(data) {
-    if(data.x !== x || data.y !== y || data.color !== color) {
-      x = data.x;
-      y = data.y;
-      color = data.color;
-      setRootNodeStyle({
-        borderColor: color,
-        left: (x || 0) + 'px',
-        top: (y || 0) + 'px'
-      });
+  function setY(value) {
+    if (y !== value) {
+      y = value;
+      setPositionNode();
+      if (label) setLabelNode();
     }
   }
 
-  function setClass(data) {
-    if(data.big !== big || data.label !== label) {
-      big = data.big;
-      label = data.label;
-      setRootNodeClass(getClass());
+  function setColor(value) {
+    if (color !== value) {
+      color = value;
+      setColorNode(value);
     }
   }
 
-  function setCoords(data) {
-    if(data.label) {
-      setSpanNodeClass('label');
-      setSpanNode(x + ',' + y);
+  function setBig(value) {
+    if (big !== value) {
+      big = value;
+      setClassNode();
     }
   }
 
-  /* Logic functions */
-  function getClass() {
-		let cl = 'cursor';
-		if (big) cl += ' big';
-		if (label) cl += ' label';
-		return cl;
+  function setLabel(value) {
+    if (label !== value) {
+      label = value;
+      setClassNode();
+      setLabelNode();
+    }
   }
 
-  function coordsChanged(data) {
-    return x !== data.x || y !== data.y;
-  }
-
-  /* Initialization */
+  // Update — x/y set first so setLabelNode reads fresh values if label flips on.
   function update(data = {}) {
-    let shouldUpdate = coordsChanged(data);
-    if(shouldUpdate)
-      setStyle(data);
-    setClass(data);
-    if(shouldUpdate)
-      setCoords(data);
-    return root; 
+    if ("x" in data) setX(data.x);
+    if ("y" in data) setY(data.y);
+    if ("color" in data) setColor(data.color);
+    if ("big" in data) setBig(data.big);
+    if ("label" in data) setLabel(data.label);
+    return el;
   }
 
   return update;
 }
-
-export default init;

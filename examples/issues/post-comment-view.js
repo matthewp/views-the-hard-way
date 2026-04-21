@@ -1,14 +1,20 @@
+import { q } from "./q.js";
 
-function init(frag) {
-  /* DOM variables */
-  let textareaNode = frag.querySelector('textarea');
-  let closeNode = frag.querySelector('#close-issue');
-  let submitNode = frag.querySelector('#submit-comment');
+export default function init(existingRoot) {
+  if (!existingRoot) throw new Error("hardview: post-comment view requires existing root");
 
-  /* State variables */
-  let hasText = false, isOpen = true, text;
+  // DOM Variables
+  const el = existingRoot;
+  const textareaNode = q(el, "textarea");
+  const closeNode = q(el, "#close-issue");
+  const submitNode = q(el, "#submit-comment");
 
-  /* DOM update functions */
+  // State Variables
+  let text = "";
+  let hasText = false;
+  let isOpen = true;
+
+  // DOM Update Functions
   function setCloseNode(value) {
     closeNode.textContent = value;
   }
@@ -17,87 +23,102 @@ function init(frag) {
     textareaNode.value = value;
   }
 
-  /* State update functions */
+  function setSubmitNode(value) {
+    submitNode.disabled = !value;
+  }
+
+  // State Logic
+  function closeButtonText() {
+    const verb = isOpen ? "Close" : "Reopen";
+    return hasText ? `${verb} issue and comment` : `${verb} issue`;
+  }
+
+  // State Update Functions
   function setHasText(value) {
-    if(hasText !== value) {
+    if (hasText !== value) {
       hasText = value;
-      setCloseNode(getCloseTextValue());
+      setCloseNode(closeButtonText());
+      setSubmitNode(value);
     }
   }
 
-  function setText(value, saveToInput) {
-    if(text !== value) {
+  function setText(value, reflectToInput) {
+    if (text !== value) {
       text = value;
       setHasText(text.length > 0);
-
-      if(saveToInput) {
-        setTextareaNode(text);
-      }
+      if (reflectToInput) setTextareaNode(text);
     }
   }
 
-  function setStatus(status) {
-    isOpen = status === 'open';
-    setCloseNode(getCloseTextValue());
-  }
-
-  function submitComment() {
-    dispatchComment(text);
-    setText('', true);
-  }
-
-  function getCloseTextValue() {
-    let status = isOpen ? 'Close' : 'Reopen';
-    if(hasText) {
-      return status + ' issue and comment';
-    } else {
-      return status + ' issue';
+  function setStatus(value) {
+    const nextOpen = value === "open";
+    if (isOpen !== nextOpen) {
+      isOpen = nextOpen;
+      setCloseNode(closeButtonText());
     }
-  } 
-
-  /* Event dispatchers */
-  function dispatchComment(value) {
-    let ev = new CustomEvent('comment-saved', {
-      bubbles: true,
-      detail: value
-    });
-    frag.dispatchEvent(ev);
   }
 
-  function dispatchStatus(status) {
-    let ev = new CustomEvent('status', {
-      detail: status
-    });
-    frag.dispatchEvent(ev);
+  // Event Dispatchers
+  function dispatchCommentSaved() {
+    el.dispatchEvent(
+      new CustomEvent("comment-saved", {
+        detail: { comment: text },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
-  /* Event listeners */
-  function onTextareaKeyup(ev) {
-    setText(ev.target.value);
+  function dispatchStatusChange() {
+    el.dispatchEvent(
+      new CustomEvent("status", {
+        detail: { status: isOpen ? "closed" : "open" },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
-  function onSubmitClick() {
-    submitComment();
+  // Event Listeners
+  function onTextareaInput(event) {
+    setText(event.target.value);
   }
 
-  function onCloseClick() {
-    if(hasText) {
-      submitComment();
+  function onSubmitClick(/* event */) {
+    if (!hasText) return;
+    dispatchCommentSaved();
+    setText("", true);
+  }
+
+  function onCloseClick(/* event */) {
+    if (hasText) {
+      dispatchCommentSaved();
+      setText("", true);
     }
-    dispatchStatus(isOpen ? 'closed' : 'open');
+    dispatchStatusChange();
   }
 
-  /* Initialization stuff */
-  textareaNode.addEventListener('keyup', onTextareaKeyup);
-  submitNode.addEventListener('click', onSubmitClick);
-  closeNode.addEventListener('click', onCloseClick);
+  // Init Functionality
+  setCloseNode(closeButtonText()); // initial label paint
+  setSubmitNode(false); // submit disabled until there's text
 
+  const ac = new AbortController();
+  const { signal } = ac;
+
+  textareaNode.addEventListener("input", onTextareaInput, { signal });
+  submitNode.addEventListener("click", onSubmitClick, { signal });
+  closeNode.addEventListener("click", onCloseClick, { signal });
+
+  function disconnect() {
+    ac.abort();
+  }
+
+  // Update
   function update(data = {}) {
-    if(data.status) setStatus(data.status);
-    return frag;
+    if ("status" in data) setStatus(data.status);
+    return el;
   }
 
+  update.disconnect = disconnect;
   return update;
 }
-
-export default init;

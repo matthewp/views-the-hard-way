@@ -1,17 +1,16 @@
-
-function conditional(left, right) {
-  let parent = left.parentNode || right.parentNode;
+export function conditional(left, right) {
+  const parent = left.parentNode || right.parentNode;
 
   function remove(node) {
-    if(node.parentNode === parent) {
+    if (node.parentNode === parent) {
       parent.removeChild(node);
     }
   }
 
   function update(showLeft) {
-    if(showLeft) {
+    if (showLeft) {
       parent.insertBefore(left, right);
-      remove(right); 
+      remove(right);
     } else {
       parent.insertBefore(right, left);
       remove(left);
@@ -20,5 +19,3 @@ function conditional(left, right) {
 
   return update;
 }
-
-export { conditional };

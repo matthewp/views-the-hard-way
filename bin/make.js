@@ -1,53 +1,47 @@
 #!/usr/bin/env node
 const template = `const template = document.createElement('template');
 template.innerHTML = /* html */ \`
-  <div>Hello <span id="name"></span></div>
+  <div class="greeting">
+    Hello <span class="name"></span>!
+  </div>
 \`;
 
 function clone() {
-  return document.importNode(template.content, true);
+  const root = template.content.cloneNode(true).firstElementChild;
+  if (!root) throw new Error('hardview: template has no root element');
+  return root;
 }
 
 function init() {
-  /* DOM variables */
-  let frag = clone();
-  let nameNode = frag.querySelector('#name');
+  // DOM Variables
+  const el = clone();
+  const nameNode = el.querySelector('.name');
 
-  /* State variables */
+  // State Variables
   let name;
 
-  /* DOM update functions */
+  // DOM Update Functions
   function setNameNode(value) {
     nameNode.textContent = value;
   }
 
-  /* State update functions */
+  // State Update Functions
   function setName(value) {
-    if(name !== value) {
+    if (name !== value) {
       name = value;
       setNameNode(value);
     }
   }
 
-  /* Event listeners */
-
-  /* Init functionality */
-  function disconnect() {
-    
-  }
-
+  // Update
   function update(data = {}) {
-    if(data.name) setName(data.name);
-
-    return frag;
+    if ('name' in data) setName(data.name);
+    return el;
   }
-
-  update.disconnect = disconnect;
 
   return update;
 }
 
 export default init;
 `;
-
 process.stdout.write(template);

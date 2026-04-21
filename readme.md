@@ -1,75 +1,66 @@
 # Writing JavaScript Views the Hard Way
 
-Learn how to build views in plain JavaScript in a way that is maintainable, performant, and fun. *Writing JavaScript Views the Hard Way* is inspired by such books as [Learn C the Hard Way](https://learncodethehardway.org/c/).
+Learn how to build views in plain JavaScript in a way that is maintainable, performant, and fun. _Writing JavaScript Views the Hard Way_ is inspired by such books as [Learn C the Hard Way](https://learncodethehardway.org/c/).
 
 ## What is this?
 
-Writing JavaScript Views the Hard Way is a pattern for writing JavaScript views. It is meant to serve as an alternative to using frameworks and libraries such as [React](https://reactjs.org), [Vue](https://vuejs.org/) and [lit-html](https://lit-html.polymer-project.org/).
+Writing JavaScript Views the Hard Way is a **pattern** — not a library — for writing JavaScript views. It is meant to serve as an alternative to using frameworks and libraries such as [React](https://reactjs.org), [Vue](https://vuejs.org/), and [lit-html](https://lit.dev/).
 
-It is a __pattern__, not a library. This document explains how to write views in such a way as to avoid the [spaghetti code](https://en.wikipedia.org/wiki/Spaghetti_code) problems that commonly occur when writing low-level imperative code.
+Because it is a pattern, there is nothing to install and no version to upgrade. This document explains how to write views in a way that avoids the [spaghetti code](https://en.wikipedia.org/wiki/Spaghetti_code) problems that commonly plague low-level imperative code. We call the technique _the hard way_ because it eschews abstractions in favor of directness.
 
-We call this technique *the hard way* because it eschews abstractions in favor of directness.
+## Why this pattern
 
-### Advantages over frameworks
+- **Low overhead**: direct imperative code reduces abstraction cost and makes DOM work easier to profile. The pattern isn't a performance silver bullet — real wins still depend on avoiding unnecessary layout, paint, and high-frequency DOM churn — but the directness makes that work easier to measure and optimize.
+- **Zero dependencies**: your code will _never_ require an upgrade or deal with a breaking change.
+- **Portability**: code written this way is portable to any framework, which makes it perfect for low-level components shared across communities.
+- **Maintainability**: despite the reputation of imperative code being hard to maintain, views written this way are _extremely_ maintainable because they follow strict conventions. You always know where to look.
+- **Browser support**: uses only what the browser gives you. `<template>`, `CustomEvent`, and `AbortController` are everywhere modern; older targets are a small swap away (see Compatibility below).
+- **Easier to debug**: stack traces stay shallow because there are no layers between events and your code. Name your functions and you'll get traces that tell you exactly how you got somewhere.
+- **Functional (in the non-dogmatic sense)**: no classes, no inheritance, no `this`. Just plain functions — there _is_ mutation, but it's confined to one place per piece of state.
 
-There are several reasons why you might be interested in writing your views the hard way:
+## A complete hello world
 
-* __Performance__: *Writing JavaScript Views the Hard Way* uses direct imperative code, so there are no unnecessary operations performed. Whether a hot or cold path, using this technique ensures nearly the best possible performance you can get in JavaScript.
-* __0 dependencies__: This technique uses no dependencies, so your code will *never* have to be upgraded. Have you ever used a library that released a breaking change that took you a day to upgrade? You'll never experience that problem again.
-* __Portability__: Code written with simple imperative views is portable to any framework. That makes it perfect for low-level components that you might want to share with several framework communities. But I recommend using it on full apps as well.
-* __Maintainability__: Despite the reputation of imperative code being difficult to maintain, views written with Writing JavaScript Views the Hard Way are *extremely* maintainable. This is because they follow strict conventions (you'll learn these later). These conventions ensure you always know where to look in a view. Additionally it follows a *props down, events up* model that makes data sharing straight-forward.
-* __Browser support__: Code written in this manner is supported by all browsers; full-stop. We do use events to make passing data back up the component tree and our examples use a newer, nicer API, to do that, but you can use an older technique (discussed in the compatibility section) to get you back to at least IE9. But if you want to go further back than that even, substitute passing functions as props instead of using events and you can use this technique in IE6 if you want. And it will be by far the most performant solution you'll find for old browsers.
-* __Easier to debug__: Using this approach stack traces become shallow (usually only a few function calls). This is because there are no layers between events and your code. Everything is your code, and as long as you name your functions, you'll get incredible stack traces that make it easy to trace where something goes wrong.
-* __Functional__: This doesn't differentiate the technique vs *all* frameworks but it's worth pointing out at a benefit. *Writing JavaScript Views the Hard Way* is not functional in the immutable sense; there are definitely mutations; but it is functional in the sense that you're dealing with plain functions (no classes in sight) and without side-effects outside of the view's local state.
+Here's the entire pattern in one module. Each piece is explained in the sections that follow.
 
-## The structure
+```javascript
+import { q } from "./q.js";
 
-Enough with the arguments for now, let's talk about the structure. A view component written with *Writing JavaScript Views the Hard Way* looks like the following. This is a full __hello world__. From here we'll break down each part and explain it on its own.
-
-Once you understand each part you'll know how to build components/views using this pattern; it's everything you need to know.
-
-```js
-const template = document.createElement('template');
-template.innerHTML = `
-  <div>Hello <span id="name">world</span>!</div>
-`;
+const template = document.createElement("template");
+template.innerHTML = `<div class="greeting">
+  Hello <span class="name">world</span>!
+</div>`;
 
 function clone() {
-  return document.importNode(template.content, true);
+  const root = template.content.cloneNode(true).firstElementChild;
+  if (!root) throw new Error("hardview: template has no root element");
+  return root;
 }
 
 function init() {
-  /* DOM variables */
-  let frag = clone();
-  let nameNode = frag.querySelector('#name');
+  // DOM Variables
+  const el = clone();
+  const nameNode = q(el, ".name");
 
-  /* State variables */
+  // State Variables
   let name;
 
-  /* DOM update functions */
+  // DOM Update Functions
   function setNameNode(value) {
     nameNode.textContent = value;
   }
 
-  /* State update functions */
+  // State Update Functions
   function setName(value) {
-    if(name !== value) {
+    if (name !== value) {
       name = value;
       setNameNode(value);
     }
   }
 
-  /* State logic */
-
-  /* Event dispatchers */
-
-  /* Event listeners */
-
-  /* Initialization */
-
+  // Update
   function update(data = {}) {
-    if(data.name) setName(data.name);
-    return frag;
+    if ("name" in data) setName(data.name);
+    return el;
   }
 
   return update;
@@ -78,291 +69,408 @@ function init() {
 export default init;
 ```
 
-This is the basic structure. More details are to follow. First let's concentrate on the module's parts and exports.
-
-### template
-
-```js
-const template = document.createElement('template');
-template.innerHTML = `
-  <div>Hello <span id="name">world</span>!</div>
-`;
-```
-
-This is the view's template. It's a [\<template\>](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template) element. Setting its `innerHTML` causes the browser to parse and save this HTML as the template's `template.content` property. This is a [DocumentFragment](https://developer.mozilla.org/en-US/docs/Web/API/DocumentFragment) that can be quickly cloned.
-
-Notice that there are no interpolations with data. This is because, as of now, the browser doesn't support any such API. In the spirit of *The Hard Way* we use only what the browser gives us. 
-
-So instead of interpolating, we add elements at points within the HTML that we will want to update later. In this example we have `<span id="name">world</span>`. This gives us something that we can query and update later (via `frag.querySelector('#name')` for example).
-
-> *Note*: ids are global to the document. If the component you are working on is likely to be used multiple times in an application (such as a list item) you should probably not use ids, but rather a class name or possibly a [data attribute](https://developer.mozilla.org/en-US/docs/Learn/HTML/Howto/Use_data_attributes).
-
-### clone()
-
-```js
-function clone() {
-  return document.importNode(template.content, true);
-}
-```
-
-This function is mostly for convenience. All it does is clone the template and return the result. 
-
-However there are cases where you might want to slightly adjust the output. [document.importNode](https://developer.mozilla.org/en-US/docs/Web/API/Document/importNode) returns a fragment; there are cases where you want the returned node to be an __element__ (mostly so that the consumer of your view can set up event listeners). So to return the root element you can change __clone__ to:
-
-```js
-function clone() {
-  return document.importNode(template.content, true).firstElementChild;
-}
-```
-
-### init()
-
-This is the function that gets called by parent views in order to create a new view instance. Going with our hello world example, a consumer that wants to insert this into the page would do:
+And consuming it:
 
 ```html
 <!doctype html>
 <html lang="en">
-<title>Hello world</title>
-
-<main></main>
-
-<script type="module">
-  import init from './view.js';
-
-  const main = document.querySelector('main');
-  const update = init();
-
-  main.appendChild(update({ name: 'world' }));
-</script>
+  <title>Hello world</title>
+  <main></main>
+  <script type="module">
+    import init from "./view.js";
+    const main = document.querySelector("main");
+    const update = init();
+    main.appendChild(update({ name: "world" }));
+  </script>
+</html>
 ```
 
-Notice here that `view` returns another function, `update`. This is the way that parent views can pass props down to the view. We'll discuss this concept more in the [#update](update) section.
+That's the whole pattern. Every view you write follows this shape.
 
-#### React comparison
+## The three parts of every view module
 
-Since `init` creates a new view instance, it's similar in that way to a component's constructor. To give an example, [React.Component](https://reactjs.org/docs/react-component.html#constructor) does setup work in its constructor and updates happen in its `render`.
+### 1. The template
 
-```jsx
-class Welcome extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {};
-  }
+HTML structure defined in a `<template>` element. Use static markup only — no interpolations. Mark elements with classes or data attributes for later querying. Avoid `id` on anything that might be rendered more than once in a page.
 
-  render() {
-    return <div>Hello {this.props.name}!</div>;
+```javascript
+const template = document.createElement("template");
+template.innerHTML = `<div class="greeting">
+  Hello <span class="name">world</span>!
+</div>`;
+```
+
+### 2. `clone()`
+
+Duplicates the template. **Always return an element, never a fragment** — fragments get emptied on `appendChild`, which silently breaks any `update()` call that expects to re-mount the same node.
+
+Prefer `template.content.cloneNode(true)` over `document.importNode`. `importNode` exists to cross document boundaries (e.g. adopting nodes from an `<iframe>`); a template's content lives in the same document, so `cloneNode` is the direct idiom. Guard against a missing root so a template with no root element fails loudly:
+
+```javascript
+function clone() {
+  const root = template.content.cloneNode(true).firstElementChild;
+  if (!root) throw new Error("hardview: template has no root element");
+  return root;
+}
+```
+
+### 3. `init()`
+
+Creates a closure containing all view state and logic. Returns an `update()` function that parents call to pass props and receive the rendered element.
+
+Because `init()` creates a new view instance, it plays the role a component constructor plays in a framework — setup work happens once here, and subsequent `update()` calls reconcile props without rebuilding anything.
+
+## A recommended helper: `q()`
+
+`querySelector` returns `Element | null`, and a typo in a selector only surfaces on first mutation — often far from the cause. A tiny helper turns that silent failure into an immediate, loud one:
+
+```javascript
+// q.js — put in a shared module and import where needed.
+export function q(root, selector) {
+  const node = root.querySelector(selector);
+  if (!node) throw new Error(`hardview: selector not found: ${selector}`);
+  return node;
+}
+```
+
+For views with only one or two queries, a direct `el.querySelector(...)` is fine. Past that, prefer the helper.
+
+## Why do so many functions take no arguments?
+
+A common first question: "why does `canDecrement()` take no arguments? Why doesn't `onIncrementClick` receive the count?" The answer is intentional: `init()` creates a **closure**, and every function declared inside it reads and writes the closed-over state directly. Passing `count` into `canDecrement(count)` would be redundant and — more importantly — would leak the invariant the pattern relies on: _state lives in exactly one place, and only state setters transition it_.
+
+The rule:
+
+- Functions at the **boundary** of the closure (things called by parents, or that receive external input) take arguments: `update(data)`, `setName(value)`, `setNameNode(value)`.
+- Functions **inside** the closure (helpers, dispatchers, listeners, lifecycle) take no arguments by convention, because they already see everything they need. Event listeners and observer callbacks are the one exception — they receive the native `Event` or entries array, even if most handlers ignore it.
+
+## The sections inside `init()`
+
+`init()` is organized into clearly-marked sections in this exact order. Not every view uses every section — empty sections can be omitted, but the ones present must appear in the order below.
+
+### DOM Variables
+
+Cached references to DOM elements that need updating or that children mount into. Named with the `Node` suffix (the root is conventionally `el`). Prefer `const` — these references are set once.
+
+```javascript
+// DOM Variables
+const el = clone();
+const nameNode = q(el, ".name");
+const emailNode = q(el, ".email");
+```
+
+### DOM Views
+
+References to child view instances. Named with the `update` prefix. Initial composition (appending child DOM into this view's tree) happens here — this is the one place in the pattern where DOM structure is assembled outside a `set[Node]Node` function, because we're _building_ the view, not updating it.
+
+```javascript
+// DOM Views
+const updateAvatar = avatarInit();
+avatarContainer.appendChild(updateAvatar({ url: initialUrl }));
+```
+
+### State Constants
+
+Values fixed for the lifetime of this view instance (bounds, thresholds, configuration). `const`.
+
+```javascript
+// State Constants
+const min = 0;
+```
+
+### State Variables
+
+Non-DOM data (strings, numbers, objects) that can change over the lifetime of the view. Declared with `let`. Leaving them `undefined` initially is deliberate — the first `set[Name]()` call always passes the inequality check, so the DOM reflects the first value received.
+
+```javascript
+// State Variables
+let name;
+let email;
+let isActive;
+```
+
+### DOM Update Functions
+
+**The only place where DOM mutations occur.** Named `set[Node]Node()` matching the DOM variable name. They take a value and apply it directly — no equality check, that's the state setter's job.
+
+DOM update functions own **structural** and **ARIA** reflection of state (disabled, aria-selected, tabindex, hidden, etc.). They do **not** own focus movement — that's a user-interaction concern, covered in the skill's accessibility section.
+
+```javascript
+// DOM Update Functions
+function setNameNode(value) {
+  nameNode.textContent = value;
+}
+```
+
+### State Update Functions
+
+Modify state variables and trigger the corresponding DOM update. Named `set[Name]()` matching the state variable. **Always check equality before proceeding** — this is where redundant DOM work is prevented.
+
+```javascript
+// State Update Functions
+function setName(value) {
+  if (name !== value) {
+    name = value;
+    setNameNode(value);
   }
 }
 ```
 
-Using this component in another class illustrates how *Writing JavaScript Views the Hard Way* is similar:
+Usually one state update function calls exactly one DOM update function. If you find yourself touching multiple DOM nodes from a single state setter, either wrap them in one DOM update function, or split the state into smaller pieces.
 
-```js
-class App {
-  render() {
-    return <Welcome name="world" />
+### State Logic
+
+Pure helpers for derived state or computations. No arguments: they read closure state directly.
+
+```javascript
+// State Logic
+function canDecrement() {
+  return count - 1 >= min;
+}
+```
+
+### Event Dispatchers
+
+Functions that emit custom events to parent components. Use `composed: true` so the event crosses shadow DOM boundaries — important if the view is ever embedded inside a web component.
+
+```javascript
+// Event Dispatchers
+function dispatchChange() {
+  el.dispatchEvent(
+    new CustomEvent("change", {
+      detail: { count },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+}
+```
+
+Mirror native form semantics when you can: `input` for continuous feedback during an ongoing gesture, `change` when the user commits the value.
+
+### Event Listeners
+
+**Named functions** that handle DOM events. Never use anonymous functions — named functions can be removed later and produce better stack traces. The same rule applies to any long-lived subscription callback (`ResizeObserver`, `IntersectionObserver`, `MutationObserver`, `requestAnimationFrame` loops).
+
+Handlers receive the native `Event` as their first argument, even when unused.
+
+```javascript
+// Event Listeners
+function onIncrementClick(/* event */) {
+  setCount(count + 1);
+  dispatchChange();
+}
+```
+
+### Init Functionality
+
+Setup code that runs once:
+
+1. Set initial state values.
+2. Bind event listeners via a single `AbortController`.
+3. If the view may be removed from the DOM, expose a `disconnect()` so the parent can tear down and cascade to children.
+
+```javascript
+// Init Functionality
+setCount(0);
+
+const ac = new AbortController();
+const { signal } = ac;
+
+incrementNode.addEventListener("click", onIncrementClick, { signal });
+decrementNode.addEventListener("click", onDecrementClick, { signal });
+
+function disconnect() {
+  // Order matters: abort our own listeners first so we stop reacting to
+  // in-flight events, THEN cascade to children. Tearing down children
+  // while still listening risks dispatching against half-disconnected state.
+  ac.abort();
+  updateAvatar.disconnect?.();
+}
+```
+
+A single `AbortController` is far less error-prone than pairing each `addEventListener` with a matching `removeEventListener`. For static components that never leave the DOM, skip `disconnect()` entirely.
+
+### `update()`
+
+Always the last thing in `init()`. Receives props, calls state setters, returns the element. If `disconnect` is defined, attach it as a property on `update`:
+
+```javascript
+function update(data = {}) {
+  if ("name" in data) setName(data.name);
+  return el;
+}
+
+update.disconnect = disconnect; // only if the view supports teardown
+
+return update;
+```
+
+The `'name' in data` check is deliberate: passing `{}` skips the field entirely, while passing `{ name: undefined }` explicitly sets it to `undefined`. Callers can clear a field without needing a separate "unset" method.
+
+## Critical rules
+
+### Exclusive mutation
+
+- DOM updates happen only through `set[Node]Node` functions.
+- State changes only through `set[Name]` functions.
+- The one exception is **initial composition** in DOM Views, where child elements first mount into the tree.
+
+This consolidation means every DOM change and every state transition has exactly one breakpoint location.
+
+### Props down, events up
+
+- Data flows downward through `update(data)`.
+- Child events bubble up through `CustomEvent` (with `composed: true` if shadow DOM is in play) or explicit callbacks passed down via `update`.
+- Never reach up into parent state.
+
+### Single responsibility
+
+Each state variable maps to one DOM update function. If a state variable affects multiple DOM nodes, either wrap them in one DOM update function or split the state.
+
+### Conditional updates
+
+State setters check for change. DOM setters never do.
+
+```javascript
+function setName(value) {
+  if (name !== value) {
+    // gate here
+    name = value;
+    setNameNode(value); // unconditional DOM write
   }
 }
 ```
 
-To make the comparison, in our parent component/view we do:
+### Cascading disconnect
 
-```js
+If a view composes children that expose `update.disconnect`, the parent's `disconnect()` **must** call them — **after** aborting its own listeners. Missing the cascade is the most common memory leak in the pattern; getting the order wrong is the most common source of spurious late events during teardown.
+
+## A complete example — Counter
+
+Putting it all together:
+
+```javascript
+import { q } from "./q.js";
+
+const template = document.createElement("template");
+template.innerHTML = `<div class="counter">
+  <button class="decrement" type="button" aria-label="Decrement">-</button>
+  <span class="count">0</span>
+  <button class="increment" type="button" aria-label="Increment">+</button>
+</div>`;
+
+function clone() {
+  const root = template.content.cloneNode(true).firstElementChild;
+  if (!root) throw new Error("hardview: template has no root element");
+  return root;
+}
+
 function init() {
-  /* DOM variables */
-  let frag = clone();
-  let hostNode = frag.querySelector('#host');
+  // DOM Variables
+  const el = clone();
+  const countNode = q(el, ".count");
+  const incrementNode = q(el, ".increment");
+  const decrementNode = q(el, ".decrement");
 
-  /* DOM views */
-  let updateWelcome = welcomeView();
+  // State Constants
+  const min = 0;
 
-  /* DOM update functions */
-  function setHostNode(welcomeFrag) {
-    hostNode.appendChild(welcomeFrag());
+  // State Variables
+  let count;
+
+  // DOM Update Functions
+  function setCountNode(value) {
+    countNode.textContent = String(value);
+    // Reflect disabled state for accessibility whenever count changes.
+    decrementNode.disabled = value <= min;
   }
 
-  /* Initialization */
-  setHostNode(updateWelcome());
-
-  function update(data = {}) {
-    // This is equivalent to render() being called.
-    if(data.name) updateWelcome(data);
-
-    return frag;
-  }
-
-  return update;
-}
-```
-
-### Sections within init()
-
-The `init` function acts as a closure for the view instance. It contains variables and functions that are used to change state, modify the DOM, listen to events, and receive updates from parent views.
-
-Conventional wisdom says this sort of imperative code causes chaos. *Writing JavaScript Views the Hard Way* prevents this by structuring each part of a view into sections. This __convention__ gives you a place to put everything your view needs. 
-
-After all, all code is imperative in the end. Abstractions are just conventions in hiding. A __pattern__, which is all *Writing JavaScript Views the Hard Way* is, are conventions in plain sight.
-
-With that being said, here are the sections of `init`. 
-
-#### DOM variables
-
-At the top of the `init` function is a comment `/* DOM variables */` and it looks something like this:
-
-```js
-function init() {
-  /* DOM variables */
-  let frag = clone();
-  let nameNode = frag.querySelector('#name');
-
-  // More stuff later...
-}
-```
-
-Let's break down what goes here:
-
-* The __fragment__ or root element returned by [clone()](#clone) is assigned to `frag`.
-* `nameNode` is plucked from within the `frag` and held as a variable.
-
-This pattern will be used for any nodes which might need to be modified during the course of the view's lifetime.
-
-By convention DOM nodes are named like `fooNode`. Where `foo` is contextual to the node's usage and `Node` denotes that it is a DOM node.
-
-As you'll see in below sections, there are many types of bindings in a view. Having conventional names makes it easier to tell what is what.
-
-#### DOM views
-
-After __DOM variables__ come __DOM views__. These are other views used within the current view. If you are used to component libraries, a view is very much like a component. In the same way that components use other components, so do views use other views.
-
-```js
-import conditionalView from './conditiona.js';
-
-function init() {
-  /* DOM variables */
-  let frag = clone();
-
-  /* DOM views */
-  let updateCondition = conditionalView();
-
-  // More stuff later...
-}
-```
-
-As a convention view instances are named `updateFoo`. This isn't strictly required, of course, but it helps to distinguish them vs. the other types of variables within a view.
-
-The view instances are themselves functions. You pass them an object of properties which the view will use to update itself. Later in this document `update` is described.
-
-#### State variables
-
-After __DOM views__ comes __State variables__. State variables are simply variables that are not DOM nodes or DOM views. Anything else like strings or numbers fit here.
-
-State variables are useful because they give us a mechanism to prevent mutating the DOM unless the variable has changed. Later when we discuss __State update functions__ you'll see how that works, and why it is useful.
-
-```js
-function init() {
-  /* DOM variables */
-  let frag = clone();
-  let nameNode = frag.querySelector('[name]');
-
-  /* State variables */
-  let name = 'world';
-
-  // More stuff later...
-}
-```
-
-#### DOM update functions
-
-There are essentially 2 uses for views: Mutating the DOM and listening to user input from the DOM.
-
-__DOM update functions__ comes after __State variables__ and provide the mechanism for updating DOM nodes.
-
-```js
-function init() {
-  /* DOM variables */
-  let frag = clone();
-  let nameNode = frag.querySelector('[name]');
-
-  /* DOM update functions */
-  function setNodeName(value) {
-    nameNode.value = value;
-  }
-
-  // More stuff later...
-}
-```
-
-In the [DOM variables](#dom-variables) section we mention that DOM variables are named like `nameNode`. This helps to distinguish them from other types of variables in a view, like state variables.
-
-In the same way, DOM update functions are named by convention as `setNodeName`. Breaking this down:
-
-* `set` is an action we are taking on the node. It doesn't have to be set, it could be `change` or `delete` depending on what you are doing and what language you prefer.
-* `name` specifies that this node holds information about a __name__.
-* `Node` specifies that it is a DOM node that is being updated.
-
-***Important***
-
-It is critical that DOM nodes only be modified by DOM update functions. One of the difficulties in writing low-level imperative views is keeping track of where DOM mutations can occur.
-
-By restricting mutations to only DOM update functions we can more easily figure out where a mutation occurs. Additionally you can easily stick a breakpoint inside of this function and see the stack trace to figure out how we got here.
-
-![An example of shallow stack traces that you get from using views the hard way](https://user-images.githubusercontent.com/361671/52751232-ca8b6180-2fbc-11e9-96bc-393c68a019ef.png)
-
-#### State update functions
-
-After the DOM update functions comes the __State update functions__. This is a lot like the DOM update functions, but instead it is where __State variables__ are changed. An example of a state update function:
-
-```js
-function init() {
-  /* DOM variables */
-  let frag = clone();
-  let nameNode = frag.querySelector('.name');
-
-  /* State variables */
-  let name;
-
-  /* DOM update functions */
-  function setNameNode(value) {
-    nameNode.textContent = value;
-  }
-
-  /* State update functions */
-  function setName(value) {
-    if(name !== value) {
-      name = value;
-      setNameNode(value);
+  // State Update Functions
+  function setCount(value) {
+    if (count !== value) {
+      count = value;
+      setCountNode(value);
     }
   }
 
-  // More stuff later...
+  // State Logic
+  function canDecrement() {
+    return count - 1 >= min;
+  }
+
+  // Event Dispatchers
+  function dispatchChange() {
+    el.dispatchEvent(
+      new CustomEvent("change", {
+        detail: { count },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
+  // Event Listeners
+  function onIncrementClick(/* event */) {
+    setCount(count + 1);
+    dispatchChange();
+  }
+
+  function onDecrementClick(/* event */) {
+    if (canDecrement()) {
+      setCount(count - 1);
+      dispatchChange();
+    }
+  }
+
+  // Init Functionality
+  setCount(0);
+
+  const ac = new AbortController();
+  const { signal } = ac;
+  incrementNode.addEventListener("click", onIncrementClick, { signal });
+  decrementNode.addEventListener("click", onDecrementClick, { signal });
+
+  function disconnect() {
+    ac.abort();
+  }
+
+  function update(data = {}) {
+    if ("count" in data) setCount(data.count);
+    return el;
+  }
+
+  update.disconnect = disconnect;
+  return update;
 }
+
+export default init;
 ```
 
-The naming convention for State update functions is `setName`:
+## Going further
 
-* `set` is the action we are taking on the state.
-* `name` denotes the name of the state variable.
+This README covers the core pattern. The full skill documentation adds:
 
-The other thing to notice about State update functions is the following logic (from the example):
+- **TypeScript** — minimal annotations, a typed `q()`, and deriving the view type with `ReturnType<typeof init>`.
+- **Throttling and debouncing** — handling high-frequency events (`scroll`, `resize`, `pointermove`, text `input`) with `AbortSignal`-aware helpers so teardown is free.
+- **Accessibility** — focus management, focus restoration, focus traps (prefer native `<dialog>` with `showModal()`), keyboard patterns (Escape, arrow keys, roving `tabindex`), and the Popover API for non-modal overlays.
+- **Web components interop** — wrapping a factory as a custom element, handling `connectedMoveCallback` and state-preserving `moveBefore()`, deferring teardown with `queueMicrotask` + `isConnected`, attribute reflection without feedback loops, and choosing light DOM vs. shadow DOM.
+- **SSR and hydration** — accepting an existing server-rendered root and seeding state directly from a `data-state` attribute without re-rendering.
 
-```js
-if(name !== value) {
-  name = value;
-  setNameNode(value);
-}
-```
-
-The convention here is to check if the incoming value is different from the current value. If so, reassign the State variable to the new value. Secondary, you also often have a corresponding __DOM update function__ that gets called when the state variable changes. This is important because it means that we are only updating DOM when necessary.
-
-Usually a State update function is only going to call *one* DOM update function. This isn't always the case, but if you find yourself modifying multiple DOM nodes in a single State update function, it might be the case that your State variable is responsibility for too much. Instead break up the state into smaller pieces, create more State update functions, and call those in the __State logic__ section (discussed below).
-
-***Important***
-
-Like with DOM update functions, it's critical that State variables are *only* updated within the State update functions. In particular to state, it's important so that:
-
-* You can easily track and debug where state is modified, as for each variable there's only one place where it can happen.
-* By only mutating state in the State update functions, you consolidate the logic in one place.
+Each of these builds on the core pattern above without changing it.
 
 ## Compatibility
 
-__TODO__
+The pattern uses widely-supported browser APIs:
+
+- `<template>` and `DocumentFragment` — everywhere.
+- `CustomEvent` with `composed: true` — everywhere modern (the `composed` flag only matters if you use shadow DOM).
+- `AbortController` on `addEventListener` — all evergreen browsers.
+- `queueMicrotask` — all evergreen browsers.
+
+For older targets, two common swaps:
+
+- **No `AbortController` support for listeners** — keep a list of `[node, event, handler]` triples and loop through them in `disconnect()` calling `removeEventListener`. A little more bookkeeping, same pattern.
+- **`CustomEvent` is awkward or unavailable** — pass callbacks as props instead of dispatching events. "Props down" stays the same; "events up" becomes "callbacks up." No structural change otherwise.
+
+With those swaps the pattern works back to IE9, and with a few more (no `const`/`let`, no template literals, no arrow functions) back to IE6. No other change to the structure is needed — the section layout, the exclusive-mutation rule, and the props-down/events-up flow are all just conventions over what every browser has always given you.

@@ -1,89 +1,113 @@
-const template = document.createElement('template');
-template.innerHTML = `
-  <h1>Counter</h1>
-  <h2>count: <span id="count"></span></h2>
+function q(root, selector) {
+  const node = root.querySelector(selector);
+  if (!node) throw new Error(`hardview: selector not found: ${selector}`);
+  return node;
+}
 
-  <button type="button" id="increment">Increment +</button>
-  <button type="button" id="decrement">Decrement -</button>
-  <button type="button" id="reset">Reset</button>
+const template = document.createElement("template");
+template.innerHTML = `
+  <div class="counter">
+    <h2>count: <span class="count">0</span></h2>
+    <button type="button" class="increment">Increment +</button>
+    <button type="button" class="decrement">Decrement -</button>
+    <button type="button" class="reset">Reset</button>
+  </div>
 `;
 
 function clone() {
-  return document.importNode(template.content, true);
+  const root = template.content.cloneNode(true).firstElementChild;
+  if (!root) throw new Error("hardview: template has no root element");
+  return root;
 }
 
-function init() {
-  /* DOM variables */
-  let frag = clone();
-  let countNode = frag.querySelector('#count');
-  let incrementNode = frag.querySelector('#increment');
-  let decrementNode = frag.querySelector('#decrement');
-  let resetNode = frag.querySelector('#reset');
+export default function init() {
+  // DOM Variables
+  const el = clone();
+  const countNode = q(el, ".count");
+  const incrementNode = q(el, ".increment");
+  const decrementNode = q(el, ".decrement");
+  const resetNode = q(el, ".reset");
 
-  /* State constants */
+  // State Constants
   const min = 0;
 
-  /* State variables */
+  // State Variables
   let count;
-  
-  /* DOM update functions */
+
+  // DOM Update Functions
   function setCountNode(value) {
-    countNode.textContent = value;
+    countNode.textContent = String(value);
+    // Reflect disabled state on every count change — keeps button state and
+    // canDecrement() in sync without the caller having to remember.
+    decrementNode.disabled = value <= min;
   }
 
-  /* State update functions */
+  // State Update Functions
   function setCount(value) {
-    if(count !== value) {
+    if (count !== value) {
       count = value;
       setCountNode(value);
     }
   }
 
-  /* State logic */
+  // State Logic
   function canDecrement() {
     return count - 1 >= min;
   }
 
-  /* Event listeners */
-  function onIncrementClick() {
-    setCount(count + 1);
+  // Event Dispatchers
+  function dispatchChange() {
+    el.dispatchEvent(
+      new CustomEvent("change", {
+        detail: { count },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
-  function onDecrementClick() {
-    if(canDecrement()) {
+  // Event Listeners
+  function onIncrementClick(/* event */) {
+    setCount(count + 1);
+    dispatchChange();
+  }
+
+  function onDecrementClick(/* event */) {
+    if (canDecrement()) {
       setCount(count - 1);
+      dispatchChange();
     }
   }
 
-  function onResetClick() {
-    setCount(0);
+  function onResetClick(/* event */) {
+    setCount(min);
+    dispatchChange();
   }
 
-  /* Init functionality */
+  // Init Functionality
   setCount(0);
 
-  function connect() {
-    incrementNode.addEventListener('click', onIncrementClick);
-    decrementNode.addEventListener('click', onDecrementClick);
-    resetNode.addEventListener('click', onResetClick);
-  }
-  connect();
+  // One AbortController for all listeners. disconnect() just calls ac.abort()
+  // and every registration made with `signal` is torn down — no pairing
+  // addEventListener/removeEventListener calls by hand.
+  const ac = new AbortController();
+  const { signal } = ac;
+
+  incrementNode.addEventListener("click", onIncrementClick, { signal });
+  decrementNode.addEventListener("click", onDecrementClick, { signal });
+  resetNode.addEventListener("click", onResetClick, { signal });
 
   function disconnect() {
-    incrementNode.addEventListener('click', onIncrementClick);
-    decrementNode.addEventListener('click', onDecrementClick);
-    resetNode.addEventListener('click', onResetClick);
+    ac.abort();
   }
 
+  // Update
   function update(data = {}) {
-    if(data.count) setCount(data.count);
-    return frag;
+    // 'count' in data — not `if (data.count)` — so `{ count: 0 }` is honoured.
+    if ("count" in data) setCount(data.count);
+    return el;
   }
 
-  update.connect = connect;
   update.disconnect = disconnect;
-
   return update;
 }
-
-export default init;

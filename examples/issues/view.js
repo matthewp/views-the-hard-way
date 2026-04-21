@@ -1,69 +1,57 @@
-import titleView from './title-view.js';
-import postCommentView from './post-comment-view.js';
-import commentsView from './comments-view.js';
-import commentView from './comment-view.js';
+import commentInit from "./comment-view.js";
+import commentsInit from "./comments-view.js";
+import postCommentInit from "./post-comment-view.js";
+import { q } from "./q.js";
+import titleInit from "./title-view.js";
 
-function init() {
-  /* DOM variables */
-  let frag = this;
-  let headerNode = frag.querySelector('header');
-  let titleNode = frag.querySelector('#title');
-  let issueCommentNode = frag.querySelector('.comment');
-  let commentBlockNode = frag.querySelector('.comment-block');
-  let commentsNode = frag.querySelector('.comments');
+export default function init(existingRoot) {
+  if (!existingRoot) throw new Error("hardview: main view requires existing root");
 
-  /* View variables */
-  let updateTitle = titleView(headerNode);
-  let updatePostComment = postCommentView(commentBlockNode);
-  let updateComments = commentsView.call(commentsNode);
-  let updateIssueComment = commentView(issueCommentNode);
+  // DOM Variables
+  const el = existingRoot;
+  const headerNode = q(el, "header");
+  const issueCommentNode = q(el, ".body > .comment");
+  const commentBlockNode = q(el, ".comment-block");
+  const commentsNode = q(el, ".comments");
 
-  /* State variables */
-  let title;
+  // DOM Views — hydrate each child from its server-rendered root.
+  const updateTitle = titleInit(headerNode);
+  const updatePostComment = postCommentInit(commentBlockNode);
+  const updateComments = commentsInit(commentsNode);
+  const updateIssueComment = commentInit(issueCommentNode);
 
-  /* DOM update functions */
-  function setTitleNode(value) {
-    titleNode.textContent = value;
+  // Event Listeners
+  function onComment(event) {
+    updateComments({ comment: event.detail.comment });
   }
 
-  /* State update functions */
-  function setTitle(value) {
-    if(title !== value) {
-      title = value;
-      setTitleNode(value);
-    }
-  }
-
-  /* Event listeners */
-  function onComment(ev) {
-    let comment = ev.detail;
-    updateComments({ comment });
-  }
-
-  function onStatus(ev) {
-    let status = ev.detail;
-    updateTitle({ status  });
+  function onStatus(event) {
+    const { status } = event.detail;
+    updateTitle({ status });
     updatePostComment({ status });
   }
 
-  /* Init functionality */
-  commentBlockNode.addEventListener('comment-saved', onComment);
-  commentBlockNode.addEventListener('status', onStatus);
+  // Init Functionality
+  const ac = new AbortController();
+  const { signal } = ac;
+
+  commentBlockNode.addEventListener("comment-saved", onComment, { signal });
+  commentBlockNode.addEventListener("status", onStatus, { signal });
 
   function disconnect() {
-    commentBlockNode.removeEventListener('comment-saved', onComment);
-    commentBlockNode.removeEventListener('status', onStatus);
+    ac.abort();
+    updateTitle.disconnect?.();
+    updatePostComment.disconnect?.();
+    updateComments.disconnect?.();
+    updateIssueComment.disconnect?.();
   }
 
-  function update(data = {}) {
-    if(data.name) setName(data.name);
-
-    return frag;
+  // Update
+  function update(/* data = {} */) {
+    // No top-level props currently flow in; kept for API consistency.
+    return el;
   }
 
   update.disconnect = disconnect;
-
   return update;
 }
-
-export default init;
